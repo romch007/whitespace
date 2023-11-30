@@ -20,12 +20,11 @@ impl Lexer {
     pub fn lex(&self) -> Vec<Token> {
         self.input
             .chars()
-            .filter(|&chr| chr == ' ' || chr == '\n' || chr == '\t')
-            .map(|chr| match chr {
-                ' ' => Token::Space,
-                '\t' => Token::Tab,
-                '\n' => Token::LineFeed,
-                _ => panic!("this should not happen"),
+            .filter_map(|chr| match chr {
+                ' ' => Some(Token::Space),
+                '\t' => Some(Token::Tab),
+                '\n' => Some(Token::LineFeed),
+                _ => None,
             })
             .collect()
     }

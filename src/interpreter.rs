@@ -27,8 +27,8 @@ impl VM {
     }
 
     pub fn execute(&mut self, instructions: &[Instruction]) -> Result<()> {
-        for (i, instruction) in instructions.iter().enumerate() {
-            if let Instruction::MarkLocation(label) = instruction {
+        for (i, instr) in instructions.iter().enumerate() {
+            if let Instruction::MarkLocation(label) = instr {
                 self.labels.insert(label.clone(), i);
             }
         }
@@ -49,14 +49,7 @@ impl VM {
 
                     self.stack.push(*element);
                 }
-                Instruction::Copy(pos) => {
-                    let element = self
-                        .stack
-                        .get(stack_len - 1 - (*pos as usize))
-                        .ok_or_else(|| anyhow!("trying to copy a non-existent element"))?;
-
-                    self.stack.push(*element);
-                }
+                Instruction::Copy(_) => unimplemented!("copy"),
                 Instruction::Swap => {
                     self.stack.swap(stack_len - 1, stack_len - 2);
                 }
@@ -100,18 +93,18 @@ impl VM {
                     let value = self.pop_stack()?;
                     let address = self.pop_stack()?;
 
-                    self.store_heap(address as usize, value)?;
+                    self.store_heap(address, value)?;
                 }
                 Instruction::HeapRetrieve => {
                     let address = self.pop_stack()?;
 
-                    let value = self.get_heap(address as usize)?;
+                    let value = self.get_heap(address)?;
 
                     self.stack.push(value);
                 }
                 Instruction::MarkLocation(_) => {}
                 Instruction::Call(label) => {
-                    self.stack.push((self.instruction_ptr as i32) + 1);
+                    self.stack.push(i32::try_from(self.instruction_ptr)? + 1);
                     self.jump(label)?;
                 }
                 Instruction::Jump(label) => {
@@ -133,7 +126,7 @@ impl VM {
                 }
                 Instruction::EndSubroutine => {
                     let addr = self.pop_stack()?;
-                    self.instruction_ptr = addr as usize;
+                    self.instruction_ptr = usize::try_from(addr).with_context(|| "invalid addr")?;
                 }
                 Instruction::EndProgram => break Ok(()),
                 Instruction::OutputChar => {
@@ -197,7 +190,9 @@ impl VM {
         Ok(())
     }
 
-    fn get_heap(&self, address: usize) -> Result<i32> {
+    fn get_heap(&self, address: i32) -> Result<i32> {
+        let address = usize::try_from(address).with_context(|| "invalid address")?;
+
         if address >= self.heap.len() {
             bail!("heap overflow");
         }
@@ -205,7 +200,9 @@ impl VM {
         Ok(self.heap[address])
     }
 
-    fn store_heap(&mut self, address: usize, value: i32) -> Result<()> {
+    fn store_heap(&mut self, address: i32, value: i32) -> Result<()> {
+        let address = usize::try_from(address).with_context(|| "invalid address")?;
+
         if address >= self.heap.len() {
             bail!("heap overflow");
         }
