@@ -87,7 +87,11 @@ impl VM {
                 Instruction::Modulo => {
                     let left = self.pop_stack()?;
                     let right = self.pop_stack()?;
-                    self.stack.push(left % right);
+                    self.stack.push(
+                        left.checked_rem(right).ok_or_else(|| {
+                            anyhow!("trying to compute remainder of {left} by zero")
+                        })?,
+                    );
                 }
                 Instruction::HeapStore => {
                     let value = self.pop_stack()?;
